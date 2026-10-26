@@ -540,14 +540,14 @@
     <string name="torch_action_off">Tap to turn off</string>
 
     <!-- Onboarding strings -->
-    <string name="onboarding_open_settings_title">Set up Lawnchair</string>
-    <string name="onboarding_open_settings_subtitle">Long-press on the home screen to open settings</string>
+    <string name="onboarding_open_settings_title">ESCATE NEXO · Tu espacio de acción</string>
+    <string name="onboarding_open_settings_subtitle">Mantén pulsada la pantalla para personalizar NEXO</string>
 
-    <string name="onboarding_major_upgrade_title">Meet the new Lawnchair</string>
-    <string name="onboarding_major_upgrade_subtitle">See what\'s new</string>
+    <string name="onboarding_major_upgrade_title">Descubre ESCATE NEXO</string>
+    <string name="onboarding_major_upgrade_subtitle">Explora los cambios</string>
 
-    <string name="onboarding_welcome">Welcome to Lawnchair!</string>
-    <string name="onboarding_swipe_up">Swipe up to open the app drawer</string>
+    <string name="onboarding_welcome">¡Bienvenido a ESCATE NEXO!</string>
+    <string name="onboarding_swipe_up">Desliza hacia arriba para ver las aplicaciones</string>
 
     <!-- Smartspacer strings -->
     <string name="maximum_number_of_targets">Maximum number of targets</string>
