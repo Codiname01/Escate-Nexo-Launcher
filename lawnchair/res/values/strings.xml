@@ -539,6 +539,15 @@
     <string name="torch_status_on">Flashlight on</string>
     <string name="torch_action_off">Tap to turn off</string>
 
+    <!-- ESCATE NEXO: initial logical spaces (layouts are not isolated yet) -->
+    <string name="nexo_spaces_menu">NEXO Spaces</string>
+    <string name="nexo_spaces_dialog_title">Elige tu espacio NEXO</string>
+    <string name="nexo_space_work">Trabajo</string>
+    <string name="nexo_space_study">Estudio</string>
+    <string name="nexo_space_create">Creación</string>
+    <string name="nexo_space_music">Música</string>
+    <string name="nexo_space_selected">Espacio %1$s seleccionado</string>
+
     <!-- Onboarding strings -->
     <string name="onboarding_open_settings_title">ESCATE NEXO · Tu espacio de acción</string>
     <string name="onboarding_open_settings_subtitle">Mantén pulsada la pantalla para personalizar NEXO</string>
