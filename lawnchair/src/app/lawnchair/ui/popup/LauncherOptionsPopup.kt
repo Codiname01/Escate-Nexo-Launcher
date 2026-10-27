@@ -4,6 +4,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import app.lawnchair.nexo.NexoSpaces
 import app.lawnchair.preferences2.PreferenceManager2.Companion.getInstance
 import app.lawnchair.preferences2.firstCached
 import com.android.launcher3.Launcher
@@ -22,6 +23,7 @@ object LauncherOptionsPopup {
         LauncherOptionPopupItem("wallpaper", true),
         LauncherOptionPopupItem("widgets", true),
         LauncherOptionPopupItem("all_apps", true),
+        LauncherOptionPopupItem("nexo_spaces", true),
         LauncherOptionPopupItem("home_settings", true),
         LauncherOptionPopupItem("sys_settings", false),
         LauncherOptionPopupItem("default_page", false),
@@ -99,6 +101,14 @@ object LauncherOptionsPopup {
                 LauncherEvent.LAUNCHER_ALL_APPS_TAP_OR_LONGPRESS,
                 onStartAllApps,
             ),
+            "nexo_spaces" to OptionItem(
+                launcher,
+                R.string.nexo_spaces_menu,
+                R.drawable.ic_apps,
+                LauncherEvent.IGNORE,
+            ) { _: View ->
+                NexoSpaces.showSelector(launcher)
+            },
             "wallpaper" to OptionItem(
                 launcher,
                 wallpaperResString,
@@ -204,6 +214,11 @@ object LauncherOptionsPopup {
             "home_settings" -> LauncherOptionMetadata(
                 label = R.string.settings_button_text,
                 icon = R.drawable.ic_home_screen,
+            )
+
+            "nexo_spaces" -> LauncherOptionMetadata(
+                label = R.string.nexo_spaces_menu,
+                icon = R.drawable.ic_apps,
             )
 
             "default_page" -> LauncherOptionMetadata(
