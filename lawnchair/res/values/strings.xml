@@ -555,6 +555,9 @@
     <string name="nexo_no_apps_in_space">Este espacio aún no tiene aplicaciones. Pulsa Elegir aplicaciones para añadirlas.</string>
     <string name="nexo_no_installed_apps">No se encontraron aplicaciones para añadir.</string>
     <string name="nexo_app_unavailable">La aplicación ya no está disponible.</string>
+    <string name="nexo_home_header">NEXO · %1$s</string>
+    <string name="nexo_home_empty">Este espacio aún no tiene accesos. Toca aquí o pulsa Elegir aplicaciones.</string>
+    <string name="nexo_home_more">Ver %1$d aplicaciones más</string>
 
     <!-- Onboarding strings -->
     <string name="onboarding_open_settings_title">ESCATE NEXO · Tu espacio de acción</string>
