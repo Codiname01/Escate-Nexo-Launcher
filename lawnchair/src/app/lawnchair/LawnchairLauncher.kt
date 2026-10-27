@@ -39,6 +39,7 @@ import app.lawnchair.gestures.GestureController
 import app.lawnchair.gestures.VerticalSwipeTouchController
 import app.lawnchair.gestures.config.GestureHandlerConfig
 import app.lawnchair.gestures.ui.LawnchairShortcutActivity
+import app.lawnchair.nexo.NexoHomePanel
 import app.lawnchair.nexuslauncher.OverlayCallbackImpl
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences2.PreferenceManager2
@@ -96,6 +97,20 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class LawnchairLauncher : QuickstepLauncher() {
+    private var nexoHomePanel: NexoHomePanel? = null
+    private val nexoPanelStateListener = object : StateManager.StateListener<LauncherState> {
+        override fun onStateTransitionStart(toState: LauncherState) {
+            nexoHomePanel?.view?.visibility = if (toState == LauncherState.NORMAL) View.VISIBLE else View.GONE
+        }
+        override fun onStateTransitionComplete(finalState: LauncherState) {
+            nexoHomePanel?.view?.visibility = if (finalState == LauncherState.NORMAL) View.VISIBLE else View.GONE
+        }
+    }
+
+    fun refreshNexoHomePanel() {
+        nexoHomePanel?.render()
+    }
+
     private val defaultOverlay by unsafeLazy { OverlayCallbackImpl(this) }
     private val prefs by unsafeLazy { PreferenceManager.getInstance(this) }
     private val preferenceManager2 by unsafeLazy { PreferenceManager2.getInstance(this) }
@@ -230,6 +245,18 @@ class LawnchairLauncher : QuickstepLauncher() {
         }
         preferenceManager2.backPressGestureHandler.onEach(launchIn = lifecycleScope) { handler ->
             hasBackGesture = handler !is GestureHandlerConfig.NoOp
+        }
+
+        // NEXO home overlay is added only after Launcher3 has initialized its views.
+        launcher.stateManager.addStateListener(nexoPanelStateListener)
+        dragLayer.post {
+            if (!isDestroyed && nexoHomePanel == null) {
+                val panel = NexoHomePanel(this@LawnchairLauncher)
+                nexoHomePanel = panel
+                panel.attach()
+                panel.view.visibility =
+                    if (launcher.stateManager.state == LauncherState.NORMAL) View.VISIBLE else View.GONE
+            }
         }
 
         LauncherOptionsPopup.restoreMissingPopupOptions(launcher)
@@ -469,6 +496,7 @@ class LawnchairLauncher : QuickstepLauncher() {
 
     override fun onResume() {
         super.onResume()
+        refreshNexoHomePanel()
         restartIfPending()
         refreshPredictionContainersFromModel()
 
@@ -494,10 +522,14 @@ class LawnchairLauncher : QuickstepLauncher() {
 
     override fun onStateSetEnd(state: LauncherState) {
         super.onStateSetEnd(state)
+        nexoHomePanel?.view?.visibility = if (state == LauncherState.NORMAL) View.VISIBLE else View.GONE
         refreshPredictionContainersFromModel()
     }
 
     override fun onDestroy() {
+        launcher.stateManager.removeStateListener(nexoPanelStateListener)
+        nexoHomePanel?.detach()
+        nexoHomePanel = null
         super.onDestroy()
         // Only actually closes if required, safe to call if not enabled
         SmartspacerClient.close()
