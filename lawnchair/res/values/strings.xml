@@ -547,6 +547,14 @@
     <string name="nexo_space_create">Creación</string>
     <string name="nexo_space_music">Música</string>
     <string name="nexo_space_selected">Espacio %1$s seleccionado</string>
+    <string name="nexo_space_apps_title">NEXO · %1$s</string>
+    <string name="nexo_edit_apps">Elegir aplicaciones</string>
+    <string name="nexo_change_space">Cambiar espacio</string>
+    <string name="nexo_close">Cerrar</string>
+    <string name="nexo_save">Guardar</string>
+    <string name="nexo_no_apps_in_space">Este espacio aún no tiene aplicaciones. Pulsa Elegir aplicaciones para añadirlas.</string>
+    <string name="nexo_no_installed_apps">No se encontraron aplicaciones para añadir.</string>
+    <string name="nexo_app_unavailable">La aplicación ya no está disponible.</string>
 
     <!-- Onboarding strings -->
     <string name="onboarding_open_settings_title">ESCATE NEXO · Tu espacio de acción</string>
