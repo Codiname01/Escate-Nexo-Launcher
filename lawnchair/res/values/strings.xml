@@ -561,7 +561,7 @@
     <string name="nexo_gesture_title">Deslizar arriba en %1$s</string>
     <string name="nexo_gesture_none">Sin acción</string>
     <string name="nexo_gesture_button">Gestos</string>
-    <string name="nexo_gesture_choose_icon">Elegir icono para configurar gesto</string>
+    <string name="nexo_gesture_choose_icon">Elige una aplicación del panel, escritorio o dock</string>
     <string name="nexo_gesture_no_icons">Añade aplicaciones a este espacio antes de configurar gestos.</string>
     <string name="nexo_gesture_unassigned">Mantén pulsado el icono para configurar su gesto</string>
     <string name="nexo_gesture_accessibility">%1$s. Deslizar arriba abre %2$s. Mantén pulsado para cambiar.</string>
