@@ -133,13 +133,18 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
             }
             val cellWidth = minOf(dp(80), (launcher.resources.displayMetrics.widthPixels - dp(64)) / 4)
             apps.take(8).forEach { app ->
+                val swipeTarget = NexoIconGesture.targetLabel(launcher, selectedSpace.id, app)
                 val cell = LinearLayout(launcher).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     setPadding(dp(1), dp(6), dp(1), dp(2))
-                    setOnClickListener { NexoSpaces.launchApp(launcher, app) }
-                    contentDescription = app.label
+                    contentDescription = if (swipeTarget != null) {
+                        launcher.getString(R.string.nexo_gesture_accessibility, app.label, swipeTarget)
+                    } else {
+                        launcher.getString(R.string.nexo_gesture_configure_hint, app.label)
+                    }
                 }
+                NexoIconGesture.bind(cell, launcher, selectedSpace.id, app)
                 val image = ImageView(launcher).apply {
                     scaleType = ImageView.ScaleType.FIT_CENTER
                     val icon = try {
@@ -150,7 +155,7 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
                     setImageDrawable(icon)
                 }
                 cell.addView(image, LinearLayout.LayoutParams(dp(42), dp(42)))
-                val caption = text(app.label, 11f, foreground).apply {
+                val caption = text(if (swipeTarget == null) app.label else "↑ " + app.label, 11f, foreground).apply {
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
                     gravity = Gravity.CENTER
