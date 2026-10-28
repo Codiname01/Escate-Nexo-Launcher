@@ -8,6 +8,7 @@ package app.lawnchair.nexo
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
+import android.content.ComponentName
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -24,8 +25,37 @@ import kotlin.math.abs
 internal object NexoIconGesture {
     private const val PREFS_NAME = "nexo_icon_gestures_v1"
 
+    private fun key(spaceId: String, componentId: String) =
+        spaceId + "|" + componentId
+
     private fun key(spaceId: String, source: NexoSpaceAppStore.AppEntry) =
-        spaceId + "|" + source.id
+        key(spaceId, source.id)
+
+    /**
+     * Shared resolver for panel, workspace and dock icon swipes. Read the
+     * active space for every lookup, so gestures switch immediately.
+     * Native Lawnchair gestures retain precedence at the call site.
+     */
+    fun hasMappedSwipeUp(context: Context, sourceComponent: ComponentName): Boolean {
+        val id = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(key(NexoSpaces.currentSpace(context).id, sourceComponent.flattenToString()), null)
+        return !id.isNullOrBlank()
+    }
+
+    /** Returns true when a NEXO mapping existed (even if its app was removed). */
+    fun launchMappedSwipeUp(launcher: LawnchairLauncher, sourceComponent: ComponentName): Boolean {
+        val id = launcher.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(key(NexoSpaces.currentSpace(launcher).id, sourceComponent.flattenToString()), null)
+            ?: return false
+        val app = NexoSpaceAppStore.installedLaunchableApps(launcher)
+            .firstOrNull { it.id == id }
+        if (app == null) {
+            Toast.makeText(launcher, R.string.nexo_app_unavailable, Toast.LENGTH_SHORT).show()
+        } else {
+            NexoSpaces.launchApp(launcher, app)
+        }
+        return true
+    }
 
     private fun targetId(
         context: Context,
@@ -51,11 +81,11 @@ internal object NexoIconGesture {
      */
     fun showActiveSpacePicker(launcher: LawnchairLauncher) {
         val space = NexoSpaces.currentSpace(launcher)
-        val selectedIds = NexoSpaceAppStore.selectedIds(launcher, space.id)
+        // Include all installed launcher icons, even when the space panel is
+        // empty: users can now configure apps on HOME and in the dock.
         val apps = NexoSpaceAppStore.installedLaunchableApps(launcher)
-            .filter { it.id in selectedIds }
         if (apps.isEmpty()) {
-            Toast.makeText(launcher, R.string.nexo_gesture_no_icons, Toast.LENGTH_LONG).show()
+            Toast.makeText(launcher, R.string.nexo_no_installed_apps, Toast.LENGTH_LONG).show()
             return
         }
         AlertDialog.Builder(launcher)
