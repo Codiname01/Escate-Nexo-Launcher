@@ -91,7 +91,9 @@ class IconGestureListener(
 
     /** Check if there's any gesture configured for this entry */
     fun hasAnyGestureConfigured(): Boolean {
-        return getConfiguredGestures().isNotEmpty()
+        // BubbleTextView uses this as its ACTION_DOWN gate. Without NEXO here,
+        // regular HOME/dock icons ignore gestures configured only through NEXO.
+        return getConfiguredGestures().isNotEmpty() || hasNexoSwipeUp()
     }
 
     /** Check if there's a horizontal gesture configured for this entry. (Swipe left/right) */
