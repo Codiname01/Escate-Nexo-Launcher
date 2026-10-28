@@ -1,6 +1,8 @@
 package app.lawnchair.gestures
 
 import android.util.Log
+import android.os.Process
+import android.content.ComponentName
 import android.view.ViewConfiguration
 import androidx.datastore.preferences.core.Preferences
 import androidx.dynamicanimation.animation.DynamicAnimation
@@ -10,6 +12,7 @@ import app.lawnchair.animation.PhysicsAnimator
 import app.lawnchair.gestures.config.GestureHandlerConfig
 import app.lawnchair.gestures.type.GestureType
 import app.lawnchair.launcher
+import app.lawnchair.nexo.NexoIconGesture
 import app.lawnchair.preferences2.PreferenceManager2
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.util.ComponentKey
@@ -24,6 +27,14 @@ class IconGestureListener(
 ) : DirectionalGestureListener(view.context) {
 
     private val context get() = view.context
+
+    // The NX08B mapping is for user-installed primary-profile launcher apps.
+    // Keep work-profile/managed-user shortcuts on Lawnchair's existing engine.
+    private fun nexoSourceComponent(): ComponentName? =
+        componentKey?.takeIf { it.user == Process.myUserHandle() }?.componentName
+
+    private fun hasNexoSwipeUp(): Boolean =
+        nexoSourceComponent()?.let { NexoIconGesture.hasMappedSwipeUp(context, it) } == true
 
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private var scrollLock = ScrollLock.NONE
@@ -98,7 +109,10 @@ class IconGestureListener(
     /** Check if there's a specific gesture configured for this entry
      * @param gestureType The type of gesture to check */
     private fun hasGestureConfigured(gestureType: GestureType): Boolean {
-        return gestureType in getConfiguredGestures()
+        // Do not cache NEXO's active-space choice with Lawnchair's DataStore.
+        // Changing space must immediately affect icons already on screen.
+        return gestureType in getConfiguredGestures() ||
+            (gestureType == GestureType.SWIPE_UP && hasNexoSwipeUp())
     }
 
     /**
@@ -118,19 +132,24 @@ class IconGestureListener(
     /** Launch gesture configured operation for a specific gesture type
      * @param gestureType The type of gesture that triggered the event */
     private fun handleGesture(gestureType: GestureType, velocity: Float): Boolean {
-        val gesture = resolveGesture(gestureType) ?: return false
+        val nativeGesture = resolveGesture(gestureType)
+        val nexoComponent = if (nativeGesture == null && gestureType == GestureType.SWIPE_UP &&
+            hasNexoSwipeUp()
+        ) nexoSourceComponent() else null
+        if (nativeGesture == null && nexoComponent == null) return false
 
-        Log.d("GESTURE_HANDLER", "Handling gesture: ${gestureType.name}")
-
+        Log.d("GESTURE_HANDLER", "Handling gesture: ${gestureType.name}; NEXO=${nexoComponent != null}")
         animateIconSwipe(gestureType, velocity)
 
         context.launcher.lifecycleScope.launch {
-            Log.d("GESTURE_HANDLER", "Triggering gesture: ${gestureType.name}")
-            // Lawnchair-TODO: Migrate to MSDL vibration?
             VibratorWrapper.INSTANCE.get(context.launcher).vibrate(VibratorWrapper.OVERVIEW_HAPTIC)
-            gesture.createHandler(context).onTrigger(context.launcher)
+            if (nativeGesture != null) {
+                // Respect any explicit existing Lawnchair assignment first.
+                nativeGesture.createHandler(context).onTrigger(context.launcher)
+            } else if (nexoComponent != null) {
+                NexoIconGesture.launchMappedSwipeUp(context.launcher, nexoComponent)
+            }
         }
-
         return true
     }
 
