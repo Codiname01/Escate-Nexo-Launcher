@@ -83,7 +83,6 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
 
         val scroll = HorizontalScrollView(launcher).apply {
             isHorizontalScrollBarEnabled = false
-            fillViewport = false
         }
         val modes = LinearLayout(launcher).apply {
             orientation = LinearLayout.HORIZONTAL
