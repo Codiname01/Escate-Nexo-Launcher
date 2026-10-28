@@ -558,6 +558,11 @@
     <string name="nexo_home_header">NEXO · %1$s</string>
     <string name="nexo_home_empty">Este espacio aún no tiene accesos. Toca aquí o pulsa Elegir aplicaciones.</string>
     <string name="nexo_home_more">Ver %1$d aplicaciones más</string>
+    <string name="nexo_gesture_title">Deslizar arriba en %1$s</string>
+    <string name="nexo_gesture_none">Sin acción</string>
+    <string name="nexo_gesture_unassigned">Mantén pulsado el icono para configurar su gesto</string>
+    <string name="nexo_gesture_accessibility">%1$s. Deslizar arriba abre %2$s. Mantén pulsado para cambiar.</string>
+    <string name="nexo_gesture_configure_hint">%1$s. Mantén pulsado para asignar un gesto.</string>
 
     <!-- Onboarding strings -->
     <string name="onboarding_open_settings_title">ESCATE NEXO · Tu espacio de acción</string>
