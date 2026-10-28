@@ -45,6 +45,28 @@ internal object NexoIconGesture {
             ?.label
     }
 
+    /**
+     * Visible configuration fallback when long-press is unavailable (mouse,
+     * accessibility, or launcher interception). Chooses a source icon first.
+     */
+    fun showActiveSpacePicker(launcher: LawnchairLauncher) {
+        val space = NexoSpaces.currentSpace(launcher)
+        val selectedIds = NexoSpaceAppStore.selectedIds(launcher, space.id)
+        val apps = NexoSpaceAppStore.installedLaunchableApps(launcher)
+            .filter { it.id in selectedIds }
+        if (apps.isEmpty()) {
+            Toast.makeText(launcher, R.string.nexo_gesture_no_icons, Toast.LENGTH_LONG).show()
+            return
+        }
+        AlertDialog.Builder(launcher)
+            .setTitle(R.string.nexo_gesture_choose_icon)
+            .setItems(apps.map { it.label }.toTypedArray()) { _, which ->
+                showPicker(launcher, space.id, apps[which])
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     fun bind(
         view: View,
@@ -82,12 +104,16 @@ internal object NexoIconGesture {
                 startX = event.x
                 startY = event.y
                 longPressed = false
+                // Launcher3's drag layer can otherwise steal MOVE events,
+                // cancelling swipes before this icon receives ACTION_UP.
+                target.parent?.requestDisallowInterceptTouchEvent(true)
             }
             detector.onTouchEvent(event)
 
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> true
                 MotionEvent.ACTION_UP -> {
+                    target.parent?.requestDisallowInterceptTouchEvent(false)
                     val dx = event.x - startX
                     val dy = event.y - startY
                     if (!longPressed) {
@@ -99,7 +125,10 @@ internal object NexoIconGesture {
                     }
                     true
                 }
-                MotionEvent.ACTION_CANCEL -> true
+                MotionEvent.ACTION_CANCEL -> {
+                    target.parent?.requestDisallowInterceptTouchEvent(false)
+                    true
+                }
                 else -> true
             }
         }
