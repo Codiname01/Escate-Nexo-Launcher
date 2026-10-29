@@ -38,6 +38,7 @@ object NexoIconGesture {
      * active space for every lookup, so gestures switch immediately.
      * Native Lawnchair gestures retain precedence at the call site.
      */
+    @JvmStatic
     fun hasMappedSwipeUp(context: Context, sourceComponent: ComponentName): Boolean {
         val id = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(key(NexoSpaces.currentSpace(context).id, sourceComponent.flattenToString()), null)
