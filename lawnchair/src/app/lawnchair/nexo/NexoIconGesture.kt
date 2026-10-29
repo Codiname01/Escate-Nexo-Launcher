@@ -9,6 +9,8 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.content.ComponentName
+import android.util.Log
+import app.lawnchair.launcherNullable
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -22,7 +24,7 @@ import kotlin.math.abs
  * NEXO panel only. Tap opens the app, long press assigns a second app,
  * and swipe-up opens the assigned app. No new permissions or services.
  */
-internal object NexoIconGesture {
+object NexoIconGesture {
     private const val PREFS_NAME = "nexo_icon_gestures_v1"
 
     private fun key(spaceId: String, componentId: String) =
@@ -42,6 +44,19 @@ internal object NexoIconGesture {
         return !id.isNullOrBlank()
     }
 
+    /**
+     * Java BubbleTextView entrypoint. Also supports the icon views inside
+     * ALL_APPS. No global overlay and no system accessibility privileges.
+     */
+    @JvmStatic
+    fun launchMappedSwipeUpFromIcon(context: Context, sourceComponent: ComponentName): Boolean {
+        val launcher = context.launcherNullable ?: run {
+            Log.w("NEXO_GESTURE", "Cannot resolve launcher context")
+            return false
+        }
+        return launchMappedSwipeUp(launcher, sourceComponent)
+    }
+
     /** Returns true when a NEXO mapping existed (even if its app was removed). */
     fun launchMappedSwipeUp(launcher: LawnchairLauncher, sourceComponent: ComponentName): Boolean {
         val id = launcher.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -49,6 +64,9 @@ internal object NexoIconGesture {
             ?: return false
         val app = NexoSpaceAppStore.installedLaunchableApps(launcher)
             .firstOrNull { it.id == id }
+        Log.d("NEXO_GESTURE", "dispatch space=" + NexoSpaces.currentSpace(launcher).id +
+            " source=" + sourceComponent.flattenToShortString() +
+            " target=" + id + " found=" + (app != null))
         if (app == null) {
             Toast.makeText(launcher, R.string.nexo_app_unavailable, Toast.LENGTH_SHORT).show()
         } else {
