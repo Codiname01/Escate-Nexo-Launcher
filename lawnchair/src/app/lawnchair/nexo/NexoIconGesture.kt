@@ -83,7 +83,7 @@ object NexoIconGesture {
     ): String? = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .getString(key(spaceId, source), null)
 
-    fun targetLabel(
+    internal fun targetLabel(
         context: Context,
         spaceId: String,
         source: NexoSpaceAppStore.AppEntry,
@@ -117,7 +117,7 @@ object NexoIconGesture {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    fun bind(
+    internal fun bind(
         view: View,
         launcher: LawnchairLauncher,
         spaceId: String,
