@@ -44,6 +44,8 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.content.ComponentName;
+import android.os.Process;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -114,6 +116,7 @@ import java.util.Objects;
 import app.lawnchair.preferences2.PreferenceCacheExtensionsKt;
 import app.lawnchair.font.FontManager;
 import app.lawnchair.gestures.IconGestureListener;
+import app.lawnchair.nexo.NexoIconGesture;
 import app.lawnchair.preferences.PreferenceManager;
 import app.lawnchair.preferences2.PreferenceManager2;
 import app.lawnchair.util.LawnchairUtilsKt;
@@ -257,6 +260,12 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     private IconGestureListener mGestureListener;
     private boolean mShouldHandleIconSwipeTouch; // Lawnchair: Icon swipe gesture feature
 
+    // ESCATE NX08C: raw-screen-distance detector for apps with NEXO mapping.
+    private boolean mNexoSwipeTracking;
+    private float mNexoSwipeDownRawX;
+    private float mNexoSwipeDownRawY;
+    private ComponentName mNexoSwipeSource;
+
     public BubbleTextView(Context context) {
         this(context, null, 0);
     }
@@ -385,6 +394,8 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         // Lawnchair: Icon swipe gesture feature
         mGestureListener = null;
         mShouldHandleIconSwipeTouch = false;
+        mNexoSwipeTracking = false;
+        mNexoSwipeSource = null;
     }
 
     private void cancelDotScaleAnim() {
@@ -698,6 +709,10 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
                 && shouldIgnoreTouchDown(event.getX(), event.getY())) {
             return false;
         }
+        // NEXO: configured icons use distance instead of requiring a fling.
+        if (handleNexoIconSwipeTouchEvent(event)) {
+            return true;
+        }
         // Lawnchair: Icon swipe gesture feature
         if (handleIconSwipeTouchEvent(event)) {
             return true;
@@ -729,6 +744,96 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     /** Lawnchair: Handle icon swipe gesture feature, self-explanatory. 
      * Only do horizontal gesture at the moment
      * @param event The type of MotionEvent to handle */
+    /**
+     * Detect a swipe-up on any NEXO-mapped icon in workspace, dock, folders
+     * or ALL_APPS. Preserve native gestures and unmapped icon scrolling.
+     */
+    private boolean handleNexoIconSwipeTouchEvent(MotionEvent event) {
+        final int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            mNexoSwipeTracking = false;
+            mNexoSwipeSource = null;
+            if (mDisplay != DISPLAY_WORKSPACE && mDisplay != DISPLAY_FOLDER
+                    && mDisplay != DISPLAY_ALL_APPS) {
+                return false;
+            }
+            if (!(getTag() instanceof ItemInfoWithIcon info)
+                    || !Process.myUserHandle().equals(info.user)) {
+                return false;
+            }
+            final ComponentName source = info.getTargetComponent();
+            if (source == null
+                    || !NexoIconGesture.hasMappedSwipeUp(getContext(), source)
+                    || (mGestureListener != null
+                            && mGestureListener.hasNativeSwipeUpConfigured())) {
+                return false;
+            }
+            mNexoSwipeTracking = true;
+            mNexoSwipeSource = source;
+            mNexoSwipeDownRawX = event.getRawX();
+            mNexoSwipeDownRawY = event.getRawY();
+            // Prevent Launcher3 parents from consuming the drag mid-swipe.
+            if (getParent() != null) {
+                getParent().requestDisallowInterceptTouchEvent(true);
+            }
+            Log.d("NEXO_GESTURE", "DOWN display=" + mDisplay
+                    + " source=" + source.flattenToShortString());
+            return false;
+        }
+        if (!mNexoSwipeTracking) {
+            return false;
+        }
+
+        final float dx = event.getRawX() - mNexoSwipeDownRawX;
+        final float dy = event.getRawY() - mNexoSwipeDownRawY;
+        final float threshold = Math.max(
+                getResources().getDisplayMetrics().density * 38f,
+                android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop() * 2f);
+        if (action == MotionEvent.ACTION_MOVE) {
+            // Let downwards and sideways gestures follow their normal route.
+            if (dy > threshold || (Math.abs(dx) > threshold * 1.5f
+                    && Math.abs(dx) > Math.abs(dy))) {
+                releaseNexoSwipe();
+            }
+            return false;
+        }
+        if (action == MotionEvent.ACTION_UP) {
+            final ComponentName source = mNexoSwipeSource;
+            releaseNexoSwipe();
+            if (source != null && -dy >= threshold
+                    && -dy > Math.abs(dx) * 1.25f) {
+                Log.d("NEXO_GESTURE", "SWIPE_UP display=" + mDisplay
+                        + " distancePx=" + (-dy)
+                        + " source=" + source.flattenToShortString());
+                boolean launched =
+                        NexoIconGesture.launchMappedSwipeUpFromIcon(getContext(), source);
+                if (launched) {
+                    cancelLongPress();
+                    MotionEvent cancel = MotionEvent.obtain(event);
+                    cancel.setAction(MotionEvent.ACTION_CANCEL);
+                    super.onTouchEvent(cancel);
+                    mLongPressHelper.onTouchEvent(cancel);
+                    cancel.recycle();
+                    setPressed(false);
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (action == MotionEvent.ACTION_CANCEL) {
+            releaseNexoSwipe();
+        }
+        return false;
+    }
+
+    private void releaseNexoSwipe() {
+        mNexoSwipeTracking = false;
+        mNexoSwipeSource = null;
+        if (getParent() != null) {
+            getParent().requestDisallowInterceptTouchEvent(false);
+        }
+    }
+
     private boolean handleIconSwipeTouchEvent(MotionEvent event) {
         if (!shouldSupportIconSwipeGestures()) {
             return false;
