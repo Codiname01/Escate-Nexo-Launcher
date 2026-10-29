@@ -89,6 +89,10 @@ class IconGestureListener(
         }
     }
 
+    /** Used by BubbleTextView to avoid overriding Lawnchair user settings. */
+    fun hasNativeSwipeUpConfigured(): Boolean =
+        resolveGesture(GestureType.SWIPE_UP) != null
+
     /** Check if there's any gesture configured for this entry */
     fun hasAnyGestureConfigured(): Boolean {
         // BubbleTextView uses this as its ACTION_DOWN gate. Without NEXO here,
