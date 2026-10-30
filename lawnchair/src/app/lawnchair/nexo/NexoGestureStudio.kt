@@ -171,6 +171,7 @@ internal object NexoGestureStudio {
         header.setPadding(0, dp(launcher, 13), 0, dp(launcher, 4))
         root.addView(header)
 
+        val actionRefreshers = mutableListOf<() -> Unit>()
         Gesture.entries.forEach { gesture ->
             val row = text(launcher, "", 14f)
             fun refresh() {
@@ -181,6 +182,7 @@ internal object NexoGestureStudio {
                 row.text = launcher.getString(gesture.titleRes) + "  →  " + display
             }
             refresh()
+            actionRefreshers.add { refresh() }
             row.setPadding(dp(launcher, 8), dp(launcher, 10), dp(launcher, 8), dp(launcher, 10))
             row.isClickable = true
             row.setOnClickListener {
@@ -200,6 +202,26 @@ internal object NexoGestureStudio {
             }
             root.addView(row)
         }
+
+        val restore = text(launcher, launcher.getString(R.string.nexo_studio_restore), 13f).apply {
+            setPadding(0, dp(launcher, 18), 0, dp(launcher, 12))
+            isClickable = true
+            setOnClickListener {
+                AlertDialog.Builder(launcher)
+                    .setTitle(R.string.nexo_studio_restore)
+                    .setMessage(R.string.nexo_studio_restore_confirm)
+                    .setPositiveButton(R.string.nexo_studio_restore) { _, _ ->
+                        val editor = studioPrefs.edit()
+                        Gesture.entries.forEach { editor.remove(it.id) }
+                        editor.apply()
+                        actionRefreshers.forEach { it() }
+                        status.text = launcher.getString(R.string.nexo_studio_restore_done)
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
+        root.addView(restore)
 
         val scroll = ScrollView(launcher).apply {
             addView(root)
