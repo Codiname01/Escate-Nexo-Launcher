@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $originExpected = 'https://github.com/Codiname01/Escate-Nexo-Launcher.git'
-$branchExpected = 'feature/nexo-nx09a-icon-gesture-bridge'
+$branchExpected = 'feature/nexo-nx09a-gesture-studio'
 $packageExpected = 'pe.escate.nexo.debug'
 $sdk = 'C:\Sdk'
 $jdk = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hotspot'
