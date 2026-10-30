@@ -578,6 +578,19 @@
     <string name="nexo_studio_next_space">Siguiente espacio NEXO</string>
     <string name="nexo_studio_favorites">Mostrar aplicaciones del espacio</string>
     <string name="nexo_studio_missing_app">Aplicación no disponible</string>
+    <string name="nexo_studio_practice_on">Modo ensayo ACTIVADO · toca para ejecutar acciones</string>
+    <string name="nexo_studio_practice_off">Modo ejecución ACTIVADO · toca para volver a ensayo</string>
+    <string name="nexo_studio_practice_result">Ensayo: %1$s · no se ejecutó ninguna acción</string>
+    <string name="nexo_studio_no_match">Gesto no reconocido. Prueba un movimiento más amplio.</string>
+    <string name="nexo_studio_sensitivity">Sensibilidad de letras M/T</string>
+    <string-array name="nexo_studio_sensitivity_options">
+        <item>Precisa (menos falsos positivos)</item>
+        <item>Normal</item>
+        <item>Flexible (más fácil de reconocer)</item>
+    </string-array>
+    <string name="nexo_studio_restore">Restaurar acciones de Gesture Studio</string>
+    <string name="nexo_studio_restore_confirm">¿Restaurar solo las cinco acciones de Gesture Studio? Los gestos de iconos, espacios y aplicaciones permanecerán intactos.</string>
+    <string name="nexo_studio_restore_done">Acciones iniciales restauradas</string>
     <string name="nexo_gesture_choose_icon">Elige una aplicación del panel, escritorio o dock</string>
     <string name="nexo_gesture_no_icons">Añade aplicaciones a este espacio antes de configurar gestos.</string>
     <string name="nexo_gesture_unassigned">Mantén pulsado el icono para configurar su gesto</string>
