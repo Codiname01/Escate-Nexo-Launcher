@@ -137,7 +137,6 @@ internal object NexoGestureStudio {
         }
 
         val scroll = ScrollView(launcher).apply {
-            isFillViewport = false
             addView(root)
         }
         dialog = AlertDialog.Builder(launcher)
