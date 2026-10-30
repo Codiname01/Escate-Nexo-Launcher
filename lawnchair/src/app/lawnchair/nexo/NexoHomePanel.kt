@@ -79,6 +79,10 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
         gestures.setPadding(dp(6), dp(8), dp(6), dp(8))
         gestures.setOnClickListener { NexoIconGesture.showActiveSpacePicker(launcher) }
         titleBar.addView(gestures)
+        val studio = text(launcher.getString(R.string.nexo_studio_menu), 11f, accent, bold = true)
+        studio.setPadding(dp(6), dp(8), dp(6), dp(8))
+        studio.setOnClickListener { NexoGestureStudio.show(launcher) }
+        titleBar.addView(studio)
         val edit = text(launcher.getString(R.string.nexo_edit_apps), 11f, accent, bold = true)
         edit.setPadding(dp(8), dp(8), dp(4), dp(8))
         edit.setOnClickListener { NexoSpaces.editActiveSpace(launcher) }
