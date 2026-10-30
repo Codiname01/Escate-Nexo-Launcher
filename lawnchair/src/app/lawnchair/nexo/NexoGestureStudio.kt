@@ -1,5 +1,5 @@
 /*
- * ESCATE NEXO — NX09A Gesture Studio.
+ * ESCATE NEXO — NX09B Gesture Studio QA controls.
  * Copyright 2026 ESCATE NEXO contributors.
  * Licensed under the Apache License, Version 2.0.
  */
@@ -36,6 +36,16 @@ import kotlin.math.min
  */
 internal object NexoGestureStudio {
     private const val PREFS = "nexo_gesture_studio_v1"
+    private const val KEY_PRACTICE = "practice_only"
+    private const val KEY_SENSITIVITY = "shape_sensitivity"
+
+    private fun shapeTolerance(context: Context): Float = when (
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_SENSITIVITY, 1)
+    ) {
+        0 -> 0.065f // Precise; fewer false positives.
+        2 -> 0.140f // Relaxed; for difficult touchscreen strokes.
+        else -> 0.095f
+    }
 
     private enum class Gesture(val id: String, val titleRes: Int, val fallback: String) {
         PINCH("pinch", R.string.nexo_studio_pinch, "system:select_space"),
@@ -75,6 +85,48 @@ internal object NexoGestureStudio {
         val explanation = text(launcher, launcher.getString(R.string.nexo_studio_description), 13f)
         root.addView(explanation)
 
+        val studioPrefs = launcher.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        var practiceOnly = studioPrefs.getBoolean(KEY_PRACTICE, true)
+        val practiceSwitch = text(launcher, "", 14f).apply {
+            setPadding(0, dp(launcher, 12), 0, dp(launcher, 9))
+        }
+        fun refreshPractice() {
+            practiceSwitch.text = launcher.getString(
+                if (practiceOnly) R.string.nexo_studio_practice_on
+                else R.string.nexo_studio_practice_off
+            )
+        }
+        refreshPractice()
+        practiceSwitch.setOnClickListener {
+            practiceOnly = !practiceOnly
+            studioPrefs.edit().putBoolean(KEY_PRACTICE, practiceOnly).apply()
+            refreshPractice()
+        }
+        root.addView(practiceSwitch)
+
+        val sensitivityRow = text(launcher, "", 13f).apply {
+            setPadding(0, dp(launcher, 4), 0, dp(launcher, 10))
+        }
+        fun refreshSensitivity() {
+            val sensitivity = studioPrefs.getInt(KEY_SENSITIVITY, 1).coerceIn(0, 2)
+            sensitivityRow.text = launcher.getString(R.string.nexo_studio_sensitivity) +
+                ": " + launcher.resources.getStringArray(R.array.nexo_studio_sensitivity_options)[sensitivity]
+        }
+        refreshSensitivity()
+        sensitivityRow.setOnClickListener {
+            val options = launcher.resources.getStringArray(R.array.nexo_studio_sensitivity_options)
+            AlertDialog.Builder(launcher)
+                .setTitle(R.string.nexo_studio_sensitivity)
+                .setSingleChoiceItems(options, studioPrefs.getInt(KEY_SENSITIVITY, 1).coerceIn(0, 2)) { chooser, index ->
+                    studioPrefs.edit().putInt(KEY_SENSITIVITY, index).apply()
+                    refreshSensitivity()
+                    chooser.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+        root.addView(sensitivityRow)
+
         val status = text(launcher, launcher.getString(R.string.nexo_studio_ready), 13f).apply {
             setTextColor(Color.rgb(25, 132, 121))
             setPadding(0, dp(launcher, 8), 0, dp(launcher, 8))
@@ -82,15 +134,28 @@ internal object NexoGestureStudio {
         root.addView(status)
 
         var dialog: AlertDialog? = null
-        val pad = GesturePad(launcher) { gesture ->
-            status.text = launcher.getString(R.string.nexo_studio_detected, launcher.getString(gesture.titleRes))
-            Log.d("NEXO_STUDIO", "gesture=" + gesture.id + " action=" + getAction(launcher, gesture))
-            val action = getAction(launcher, gesture)
-            if (action != "none") {
-                dialog?.dismiss()
-                perform(launcher, action)
-            }
-        }.apply {
+        val pad = GesturePad(
+            launcher,
+            recognized = { gesture ->
+                val message = launcher.getString(R.string.nexo_studio_detected, launcher.getString(gesture.titleRes))
+                status.text = if (practiceOnly) {
+                    launcher.getString(R.string.nexo_studio_practice_result, message)
+                } else {
+                    message
+                }
+                val action = getAction(launcher, gesture)
+                Log.d("NEXO_STUDIO", "gesture=" + gesture.id + " practice=" + practiceOnly + " action=" + action)
+                if (!practiceOnly && action != "none") {
+                    dialog?.dismiss()
+                    perform(launcher, action)
+                }
+            },
+            rejected = { reason ->
+                status.text = launcher.getString(R.string.nexo_studio_no_match)
+                Log.d("NEXO_STUDIO", "unrecognized=" + reason)
+            },
+            threshold = { shapeTolerance(launcher) },
+        ).apply {
             contentDescription = launcher.getString(R.string.nexo_studio_canvas_hint)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -189,6 +254,8 @@ internal object NexoGestureStudio {
     private class GesturePad(
         context: Context,
         private val recognized: (Gesture) -> Unit,
+        private val rejected: (String) -> Unit,
+        private val threshold: () -> Float,
     ) : View(context) {
         private val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(65, 230, 201)
@@ -257,6 +324,7 @@ internal object NexoGestureStudio {
                             else -> null
                         }
                         if (gesture != null) recognized(gesture)
+                        else rejected("multi scale=$scale angle=$angleDelta")
                     }
                     pairActive = false
                     return true
@@ -265,6 +333,7 @@ internal object NexoGestureStudio {
                     if (!multi) {
                         val detected = recognizeStroke(points)
                         if (detected != null) recognized(detected)
+                        else rejected("single points=" + points.size)
                     }
                     parent?.requestDisallowInterceptTouchEvent(false)
                     path.reset()
@@ -321,7 +390,7 @@ internal object NexoGestureStudio {
             val result = min(scoreM, scoreT)
             Log.d("NEXO_STUDIO", "stroke M=" + scoreM + " T=" + scoreT)
             return when {
-                result > 0.095f -> null
+                result > threshold() -> null
                 scoreM < scoreT -> Gesture.DRAW_M
                 else -> Gesture.DRAW_T
             }
