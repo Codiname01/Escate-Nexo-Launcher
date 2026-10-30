@@ -5,6 +5,8 @@ import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import app.lawnchair.nexo.NexoSpaces
+import app.lawnchair.nexo.NexoGestureStudio
+import app.lawnchair.LawnchairLauncher
 import app.lawnchair.preferences2.PreferenceManager2.Companion.getInstance
 import app.lawnchair.preferences2.firstCached
 import com.android.launcher3.Launcher
@@ -24,6 +26,7 @@ object LauncherOptionsPopup {
         LauncherOptionPopupItem("widgets", true),
         LauncherOptionPopupItem("all_apps", true),
         LauncherOptionPopupItem("nexo_spaces", true),
+        LauncherOptionPopupItem("nexo_studio", true),
         LauncherOptionPopupItem("home_settings", true),
         LauncherOptionPopupItem("sys_settings", false),
         LauncherOptionPopupItem("default_page", false),
@@ -108,6 +111,15 @@ object LauncherOptionsPopup {
                 LauncherEvent.IGNORE,
             ) { _: View ->
                 NexoSpaces.showSelector(launcher)
+            },
+            "nexo_studio" to OptionItem(
+                launcher,
+                R.string.nexo_studio_menu,
+                R.drawable.ic_apps,
+                LauncherEvent.IGNORE,
+            ) { _: View ->
+                (launcher as? LawnchairLauncher)?.let { NexoGestureStudio.show(it) }
+                true
             },
             "wallpaper" to OptionItem(
                 launcher,
@@ -218,6 +230,10 @@ object LauncherOptionsPopup {
 
             "nexo_spaces" -> LauncherOptionMetadata(
                 label = R.string.nexo_spaces_menu,
+                icon = R.drawable.ic_apps,
+            )
+            "nexo_studio" -> LauncherOptionMetadata(
+                label = R.string.nexo_studio_menu,
                 icon = R.drawable.ic_apps,
             )
 
