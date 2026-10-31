@@ -594,6 +594,13 @@
     <string name="nexo_studio_no_draw_explain">Prueba alternativa sin arrastrar: estos botones simulan trazos M/T dentro del reconocedor. No prueban la captura táctil real.</string>
     <string name="nexo_studio_simulate_m">Simular M</string>
     <string name="nexo_studio_simulate_t">Simular T</string>
+    <string name="nexo_studio_large_canvas">Lienzo grande para mouse</string>
+    <string name="nexo_studio_mouse_hint">Mantén presionado el botón izquierdo y dibuja una M sin soltar, dentro de este cuadro. No empieces desde la barra de Android. Para T, usa un trazo continuo: izquierda a derecha, vuelve al centro y baja.</string>
+    <string name="nexo_studio_mouse_ready">Esperando clic dentro del lienzo grande</string>
+    <string name="nexo_studio_draw_inside">Dibuja aquí con clic sostenido</string>
+    <string name="nexo_studio_touch_down">Clic o toque capturado: empieza a dibujar</string>
+    <string name="nexo_studio_touch_points">Trazando: %1$d puntos capturados</string>
+    <string name="nexo_studio_touch_cancelled">Android canceló el trazo. Comienza dentro del cuadro.</string>
     <string name="nexo_gesture_choose_icon">Elige una aplicación del panel, escritorio o dock</string>
     <string name="nexo_gesture_no_icons">Añade aplicaciones a este espacio antes de configurar gestos.</string>
     <string name="nexo_gesture_unassigned">Mantén pulsado el icono para configurar su gesto</string>
