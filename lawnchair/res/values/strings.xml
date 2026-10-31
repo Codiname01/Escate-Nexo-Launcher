@@ -591,6 +591,9 @@
     <string name="nexo_studio_restore">Restaurar acciones de Gesture Studio</string>
     <string name="nexo_studio_restore_confirm">¿Restaurar solo las cinco acciones de Gesture Studio? Los gestos de iconos, espacios y aplicaciones permanecerán intactos.</string>
     <string name="nexo_studio_restore_done">Acciones iniciales restauradas</string>
+    <string name="nexo_studio_no_draw_explain">Prueba alternativa sin arrastrar: estos botones simulan trazos M/T dentro del reconocedor. No prueban la captura táctil real.</string>
+    <string name="nexo_studio_simulate_m">Simular M</string>
+    <string name="nexo_studio_simulate_t">Simular T</string>
     <string name="nexo_gesture_choose_icon">Elige una aplicación del panel, escritorio o dock</string>
     <string name="nexo_gesture_no_icons">Añade aplicaciones a este espacio antes de configurar gestos.</string>
     <string name="nexo_gesture_unassigned">Mantén pulsado el icono para configurar su gesto</string>
