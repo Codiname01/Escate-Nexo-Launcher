@@ -1,5 +1,5 @@
 /*
- * ESCATE NEXO — NX09B Gesture Studio QA controls.
+ * ESCATE NEXO — NX09C Gesture Studio no-draw test controls.
  * Copyright 2026 ESCATE NEXO contributors.
  * Licensed under the Apache License, Version 2.0.
  */
@@ -167,6 +167,38 @@ internal object NexoGestureStudio {
             LinearLayout.LayoutParams.MATCH_PARENT, dp(launcher, 240)
         ))
 
+        // Android system shade can intercept strokes from the status-bar edge.
+        // Test recognition and action dispatch without mouse/touch movement.
+        // This is a synthetic gesture test, NOT proof of real touch handling.
+        val noDrawInfo = text(launcher, launcher.getString(R.string.nexo_studio_no_draw_explain), 12f)
+        noDrawInfo.setPadding(0, dp(launcher, 12), 0, dp(launcher, 5))
+        root.addView(noDrawInfo)
+
+        val noDrawRow = LinearLayout(launcher).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        fun addNoDrawButton(label: Int, expected: Gesture) {
+            val button = text(launcher, launcher.getString(label), 13f).apply {
+                gravity = android.view.Gravity.CENTER
+                setPadding(dp(launcher, 10), dp(launcher, 12), dp(launcher, 10), dp(launcher, 12))
+                setBackgroundColor(Color.rgb(30, 110, 103))
+                setTextColor(Color.WHITE)
+                isClickable = true
+                setOnClickListener {
+                    pad.simulateLetter(expected)
+                }
+            }
+            noDrawRow.addView(
+                button,
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(dp(launcher, 3), 0, dp(launcher, 3), 0)
+                },
+            )
+        }
+        addNoDrawButton(R.string.nexo_studio_simulate_m, Gesture.DRAW_M)
+        addNoDrawButton(R.string.nexo_studio_simulate_t, Gesture.DRAW_T)
+        root.addView(noDrawRow)
+
         val header = text(launcher, launcher.getString(R.string.nexo_studio_assignments), 14f)
         header.setPadding(0, dp(launcher, 13), 0, dp(launcher, 4))
         root.addView(header)
@@ -298,6 +330,45 @@ internal object NexoGestureStudio {
             canvas.drawPath(path, ink)
         }
 
+        /**
+         * Simulate the original single-stroke templates through the exact
+         * recognizer used for finger input. Draws the test path on the pad.
+         * It does not claim that Android delivered a real touch event.
+         */
+        fun simulateLetter(expected: Gesture) {
+            val shape = when (expected) {
+                Gesture.DRAW_M -> listOf(
+                    PointF(0f, 1f), PointF(0f, 0f), PointF(0.45f, 0.85f),
+                    PointF(0.7f, 0.05f), PointF(1f, 1f),
+                )
+                Gesture.DRAW_T -> listOf(
+                    PointF(0f, 0f), PointF(1f, 0f),
+                    PointF(0.5f, 0f), PointF(0.5f, 1f),
+                )
+                else -> return
+            }
+            val margin = dp(context, 18).toFloat()
+            val availableW = max(dp(context, 110).toFloat(), width.toFloat() - margin * 2)
+            val availableH = max(dp(context, 110).toFloat(), height.toFloat() - margin * 2)
+            val samples = resample(shape.map { point ->
+                PointF(margin + point.x * availableW, margin + point.y * availableH)
+            }, 48)
+
+            path.reset()
+            samples.forEachIndexed { index, point ->
+                if (index == 0) path.moveTo(point.x, point.y)
+                else path.lineTo(point.x, point.y)
+            }
+            invalidate()
+
+            val identified = recognizeStroke(samples)
+            Log.d("NEXO_STUDIO", "synthetic expected=" + expected.id +
+                " detected=" + (identified?.id ?: "none"))
+            if (identified == expected) recognized(identified)
+            else rejected("synthetic expected=" + expected.id +
+                " detected=" + (identified?.id ?: "none"))
+        }
+
         override fun onTouchEvent(event: MotionEvent): Boolean {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -353,6 +424,13 @@ internal object NexoGestureStudio {
                 }
                 MotionEvent.ACTION_UP -> {
                     if (!multi) {
+                        if (points.isNotEmpty()) {
+                            val last = points.last()
+                            if (hypot(event.x - last.x, event.y - last.y) >= 3f) {
+                                points.add(PointF(event.x, event.y))
+                                path.lineTo(event.x, event.y)
+                            }
+                        }
                         val detected = recognizeStroke(points)
                         if (detected != null) recognized(detected)
                         else rejected("single points=" + points.size)
