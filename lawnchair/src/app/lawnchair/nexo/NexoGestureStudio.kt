@@ -1,5 +1,5 @@
 /*
- * ESCATE NEXO — NX09C Gesture Studio no-draw test controls.
+ * ESCATE NEXO — NX09D mouse/stylus canvas diagnostics.
  * Copyright 2026 ESCATE NEXO contributors.
  * Licensed under the Apache License, Version 2.0.
  */
@@ -134,9 +134,7 @@ internal object NexoGestureStudio {
         root.addView(status)
 
         var dialog: AlertDialog? = null
-        val pad = GesturePad(
-            launcher,
-            recognized = { gesture ->
+        val onRecognized: (Gesture) -> Unit = { gesture ->
                 val message = launcher.getString(R.string.nexo_studio_detected, launcher.getString(gesture.titleRes))
                 status.text = if (practiceOnly) {
                     launcher.getString(R.string.nexo_studio_practice_result, message)
@@ -149,12 +147,17 @@ internal object NexoGestureStudio {
                     dialog?.dismiss()
                     perform(launcher, action)
                 }
-            },
-            rejected = { reason ->
-                status.text = launcher.getString(R.string.nexo_studio_no_match)
-                Log.d("NEXO_STUDIO", "unrecognized=" + reason)
-            },
+        }
+        val onRejected: (String) -> Unit = { reason ->
+            status.text = launcher.getString(R.string.nexo_studio_no_match) + " (" + reason + ")"
+            Log.d("NEXO_STUDIO", "unrecognized=" + reason)
+        }
+        val pad = GesturePad(
+            launcher,
+            recognized = onRecognized,
+            rejected = onRejected,
             threshold = { shapeTolerance(launcher) },
+            feedback = { detail -> status.text = detail },
         ).apply {
             contentDescription = launcher.getString(R.string.nexo_studio_canvas_hint)
             background = GradientDrawable().apply {
@@ -198,6 +201,28 @@ internal object NexoGestureStudio {
         addNoDrawButton(R.string.nexo_studio_simulate_m, Gesture.DRAW_M)
         addNoDrawButton(R.string.nexo_studio_simulate_t, Gesture.DRAW_T)
         root.addView(noDrawRow)
+
+        // The normal Studio dialog is scrollable, so mouse strokes can begin
+        // outside its 240dp pad. Offer a larger, self-contained touch target.
+        val largeCanvas = text(launcher, launcher.getString(R.string.nexo_studio_large_canvas), 14f).apply {
+            gravity = android.view.Gravity.CENTER
+            setPadding(dp(launcher, 8), dp(launcher, 14), dp(launcher, 8), dp(launcher, 14))
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(30, 110, 103))
+                cornerRadius = dp(launcher, 12).toFloat()
+            }
+            isClickable = true
+            setOnClickListener {
+                showLargeCanvas(
+                    launcher,
+                    recognized = onRecognized,
+                    rejected = onRejected,
+                    threshold = { shapeTolerance(launcher) },
+                )
+            }
+        }
+        root.addView(largeCanvas)
 
         val header = text(launcher, launcher.getString(R.string.nexo_studio_assignments), 14f)
         header.setPadding(0, dp(launcher, 13), 0, dp(launcher, 4))
@@ -265,6 +290,61 @@ internal object NexoGestureStudio {
             .show()
     }
 
+    private fun showLargeCanvas(
+        launcher: LawnchairLauncher,
+        recognized: (Gesture) -> Unit,
+        rejected: (String) -> Unit,
+        threshold: () -> Float,
+    ) {
+        val root = LinearLayout(launcher).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(launcher, 12), dp(launcher, 12), dp(launcher, 12), dp(launcher, 12))
+        }
+        val instructions = text(launcher, launcher.getString(R.string.nexo_studio_mouse_hint), 14f)
+        root.addView(instructions)
+        val feedback = text(launcher, launcher.getString(R.string.nexo_studio_mouse_ready), 13f).apply {
+            setPadding(0, dp(launcher, 8), 0, dp(launcher, 8))
+            setTextColor(Color.rgb(25, 132, 121))
+        }
+        root.addView(feedback)
+        var canvasDialog: AlertDialog? = null
+        val bigPad = GesturePad(
+            launcher,
+            recognized = { gesture ->
+                canvasDialog?.dismiss()
+                recognized(gesture)
+            },
+            rejected = { reason ->
+                feedback.text = launcher.getString(R.string.nexo_studio_no_match) + " (" + reason + ")"
+                rejected(reason)
+            },
+            threshold = threshold,
+            feedback = { detail -> feedback.text = detail },
+        ).apply {
+            contentDescription = launcher.getString(R.string.nexo_studio_canvas_hint)
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(20, 32, 47))
+                cornerRadius = dp(launcher, 12).toFloat()
+            }
+        }
+        val canvasHeight = min(
+            dp(launcher, 460),
+            max(dp(launcher, 240), launcher.resources.displayMetrics.heightPixels / 2),
+        )
+        root.addView(
+            bigPad,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                canvasHeight,
+            ),
+        )
+        canvasDialog = AlertDialog.Builder(launcher)
+            .setTitle(R.string.nexo_studio_large_canvas)
+            .setView(root)
+            .setNegativeButton(R.string.nexo_close, null)
+            .show()
+    }
+
     private fun perform(launcher: LawnchairLauncher, action: String) {
         when {
             action == "system:select_space" -> NexoSpaces.showSelector(launcher)
@@ -310,6 +390,7 @@ internal object NexoGestureStudio {
         private val recognized: (Gesture) -> Unit,
         private val rejected: (String) -> Unit,
         private val threshold: () -> Float,
+        private val feedback: (String) -> Unit = {},
     ) : View(context) {
         private val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(65, 230, 201)
@@ -320,6 +401,11 @@ internal object NexoGestureStudio {
         }
         private val path = Path()
         private val points = mutableListOf<PointF>()
+        private var scoreDetail = ""
+        private val hintInk = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(176, 200, 212)
+            textSize = dp(context, 15).toFloat()
+        }
         private var multi = false
         private var pairActive = false
         private var firstDistance = 0f
@@ -327,6 +413,14 @@ internal object NexoGestureStudio {
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
+            if (points.isEmpty() && path.isEmpty) {
+                canvas.drawText(
+                    context.getString(R.string.nexo_studio_draw_inside),
+                    dp(context, 18).toFloat(),
+                    dp(context, 34).toFloat(),
+                    hintInk,
+                )
+            }
             canvas.drawPath(path, ink)
         }
 
@@ -373,6 +467,9 @@ internal object NexoGestureStudio {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     parent?.requestDisallowInterceptTouchEvent(true)
+                    feedback(context.getString(R.string.nexo_studio_touch_down))
+                    Log.d("NEXO_STUDIO", "touch_down x=" + event.x + " y=" + event.y +
+                        " tool=" + event.getToolType(0) + " source=" + event.source)
                     points.clear()
                     path.reset()
                     multi = false
@@ -402,6 +499,10 @@ internal object NexoGestureStudio {
                         points.add(PointF(x, y))
                         path.lineTo(x, y)
                         invalidate()
+                        if (points.size % 8 == 0) {
+                            feedback(context.getString(R.string.nexo_studio_touch_points, points.size))
+                            Log.d("NEXO_STUDIO", "touch_move points=" + points.size)
+                        }
                     }
                     return true
                 }
@@ -432,8 +533,10 @@ internal object NexoGestureStudio {
                             }
                         }
                         val detected = recognizeStroke(points)
+                        Log.d("NEXO_STUDIO", "touch_up points=" + points.size +
+                            " detected=" + (detected?.id ?: "none") + " " + scoreDetail)
                         if (detected != null) recognized(detected)
-                        else rejected("single points=" + points.size)
+                        else rejected("points=" + points.size + " " + scoreDetail)
                     }
                     parent?.requestDisallowInterceptTouchEvent(false)
                     path.reset()
@@ -441,6 +544,8 @@ internal object NexoGestureStudio {
                     return true
                 }
                 MotionEvent.ACTION_CANCEL -> {
+                    feedback(context.getString(R.string.nexo_studio_touch_cancelled))
+                    Log.d("NEXO_STUDIO", "touch_cancelled")
                     parent?.requestDisallowInterceptTouchEvent(false)
                     path.reset()
                     points.clear()
@@ -469,10 +574,16 @@ internal object NexoGestureStudio {
         }
 
         private fun recognizeStroke(input: List<PointF>): Gesture? {
-            if (input.size < 6) return null
+            if (input.size < 6) {
+                scoreDetail = "too_few_points"
+                return null
+            }
             val rangeX = input.maxOf { it.x } - input.minOf { it.x }
             val rangeY = input.maxOf { it.y } - input.minOf { it.y }
-            if (max(rangeX, rangeY) < dp(context, 75)) return null
+            if (max(rangeX, rangeY) < dp(context, 75)) {
+                scoreDetail = "too_small"
+                return null
+            }
 
             // One continuous pen path. T: left-to-right, return to centre,
             // then down. M: bottom-left, top-left, trough, peak, bottom-right.
@@ -488,7 +599,10 @@ internal object NexoGestureStudio {
             val scoreM = shapeError(actual, normalize(resample(m, 48)))
             val scoreT = shapeError(actual, normalize(resample(t, 48)))
             val result = min(scoreM, scoreT)
-            Log.d("NEXO_STUDIO", "stroke M=" + scoreM + " T=" + scoreT)
+            scoreDetail = "M=" + "%.3f".format(java.util.Locale.US, scoreM) +
+                " T=" + "%.3f".format(java.util.Locale.US, scoreT) +
+                " threshold=" + "%.3f".format(java.util.Locale.US, threshold())
+            Log.d("NEXO_STUDIO", "stroke " + scoreDetail)
             return when {
                 result > threshold() -> null
                 scoreM < scoreT -> Gesture.DRAW_M
