@@ -413,7 +413,7 @@ internal object NexoGestureStudio {
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-            if (points.isEmpty() && path.isEmpty) {
+            if (points.isEmpty()) {
                 canvas.drawText(
                     context.getString(R.string.nexo_studio_draw_inside),
                     dp(context, 18).toFloat(),
@@ -540,6 +540,7 @@ internal object NexoGestureStudio {
                     }
                     parent?.requestDisallowInterceptTouchEvent(false)
                     path.reset()
+                    points.clear()
                     invalidate()
                     return true
                 }
