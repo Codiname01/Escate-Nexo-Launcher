@@ -43,6 +43,8 @@ import app.lawnchair.gestures.config.GestureHandlerConfig
 import app.lawnchair.gestures.ui.LawnchairShortcutActivity
 import app.lawnchair.nexo.NexoDesktopGesture
 import app.lawnchair.nexo.NexoHomePanel
+import app.lawnchair.nexo.NexoWorkspaceSurface
+import app.lawnchair.nexo.NexoWorkspaceStore
 import app.lawnchair.nexuslauncher.OverlayCallbackImpl
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences2.PreferenceManager2
@@ -101,6 +103,35 @@ import kotlinx.coroutines.launch
 
 class LawnchairLauncher : QuickstepLauncher() {
     private var nexoHomePanel: NexoHomePanel? = null
+    private val nexoWorkspaceSurface by lazy(LazyThreadSafetyMode.NONE) {
+        NexoWorkspaceSurface(this)
+    }
+
+    fun nexoPanelScreenRect(): Rect? {
+        val panel = nexoHomePanel?.view ?: return null
+        val rect = Rect()
+        return if (panel.isShown && panel.getGlobalVisibleRect(rect)) rect else null
+    }
+
+    fun setNexoIndependentWorkspaceEnabled(enabled: Boolean) {
+        NexoWorkspaceStore.setEnabled(this, enabled)
+        refreshNexoHomePanel()
+        updateNexoWorkspaceVisibility(LauncherState.NORMAL)
+        refreshNexoDesktopDrawingVisibility()
+        dragLayer.post { refreshNexoWorkspace() }
+    }
+
+    fun refreshNexoWorkspace() {
+        nexoWorkspaceSurface.render()
+    }
+
+    private fun updateNexoWorkspaceVisibility(state: LauncherState) {
+        val active = NexoWorkspaceStore.isEnabled(this) && state == LauncherState.NORMAL
+        nexoWorkspaceSurface.view.visibility = if (active) View.VISIBLE else View.GONE
+        // INVISIBLE keeps the original Launcher3 model, pages, folders and
+        // widget hosts alive. Never delete or migrate its database in NX10A.
+        workspace.visibility = if (active) View.INVISIBLE else View.VISIBLE
+    }
 
     // Observe home strokes without intercepting native Launcher3 touch routing.
     private val nexoDesktopGesture by lazy(LazyThreadSafetyMode.NONE) {
@@ -118,6 +149,7 @@ class LawnchairLauncher : QuickstepLauncher() {
     private fun refreshNexoDesktopDrawingVisibility() {
         nexoDesktopGesture.visibility =
             if (NexoDesktopGesture.isEnabled(this) &&
+                !NexoWorkspaceStore.isEnabled(this) &&
                 stateManager.state == LauncherState.NORMAL) View.VISIBLE else View.GONE
     }
 
@@ -129,18 +161,23 @@ class LawnchairLauncher : QuickstepLauncher() {
     private val nexoPanelStateListener = object : StateManager.StateListener<LauncherState> {
         override fun onStateTransitionStart(toState: LauncherState) {
             nexoHomePanel?.view?.visibility = if (toState == LauncherState.NORMAL) View.VISIBLE else View.GONE
+            updateNexoWorkspaceVisibility(toState)
             nexoDesktopGesture.visibility =
                 if (toState == LauncherState.NORMAL &&
-                    NexoDesktopGesture.isEnabled(this@LawnchairLauncher)) View.VISIBLE else View.GONE
+                    NexoDesktopGesture.isEnabled(this@LawnchairLauncher) &&
+                    !NexoWorkspaceStore.isEnabled(this@LawnchairLauncher)) View.VISIBLE else View.GONE
         }
         override fun onStateTransitionComplete(finalState: LauncherState) {
             nexoHomePanel?.view?.visibility = if (finalState == LauncherState.NORMAL) View.VISIBLE else View.GONE
+            updateNexoWorkspaceVisibility(finalState)
             refreshNexoDesktopDrawingVisibility()
         }
     }
 
     fun refreshNexoHomePanel() {
         nexoHomePanel?.render()
+        refreshNexoWorkspace()
+        dragLayer.post { if (!isDestroyed) refreshNexoWorkspace() }
     }
 
     private val defaultOverlay by unsafeLazy { OverlayCallbackImpl(this) }
@@ -289,6 +326,11 @@ class LawnchairLauncher : QuickstepLauncher() {
                 panel.view.visibility =
                     if (launcher.stateManager.state == LauncherState.NORMAL) View.VISIBLE else View.GONE
             }
+            if (nexoWorkspaceSurface.view.parent == null) {
+                nexoWorkspaceSurface.attach()
+            }
+            updateNexoWorkspaceVisibility(stateManager.state)
+            nexoWorkspaceSurface.render()
             // Top-level transparent drawing view; it only accepts ACTION_DOWN
             // for a blank, bounded area when the NEXO opt-in toggle is ON.
             if (nexoDesktopGesture.parent == null) {
@@ -541,6 +583,7 @@ class LawnchairLauncher : QuickstepLauncher() {
     override fun onResume() {
         super.onResume()
         refreshNexoHomePanel()
+        updateNexoWorkspaceVisibility(stateManager.state)
         refreshNexoDesktopDrawingVisibility()
         restartIfPending()
         refreshPredictionContainersFromModel()
@@ -568,6 +611,7 @@ class LawnchairLauncher : QuickstepLauncher() {
     override fun onStateSetEnd(state: LauncherState) {
         super.onStateSetEnd(state)
         nexoHomePanel?.view?.visibility = if (state == LauncherState.NORMAL) View.VISIBLE else View.GONE
+        updateNexoWorkspaceVisibility(state)
         refreshNexoDesktopDrawingVisibility()
         refreshPredictionContainersFromModel()
     }
@@ -576,6 +620,7 @@ class LawnchairLauncher : QuickstepLauncher() {
         launcher.stateManager.removeStateListener(nexoPanelStateListener)
         nexoHomePanel?.detach()
         nexoHomePanel = null
+        nexoWorkspaceSurface.detach()
         if (nexoDesktopGesture.parent != null) {
             dragLayer.removeView(nexoDesktopGesture)
         }
