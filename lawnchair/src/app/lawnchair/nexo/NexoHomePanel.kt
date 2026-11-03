@@ -80,6 +80,7 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
         gestures.setOnClickListener { NexoIconGesture.showActiveSpacePicker(launcher) }
         titleBar.addView(gestures)
         val edit = text(launcher.getString(R.string.nexo_edit_apps), 11f, accent, bold = true)
+        edit.visibility = if (NexoWorkspaceStore.isEnabled(launcher)) View.GONE else View.VISIBLE
         edit.setPadding(dp(8), dp(8), dp(4), dp(8))
         edit.setOnClickListener { NexoSpaces.editActiveSpace(launcher) }
         titleBar.addView(edit)
@@ -97,9 +98,13 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
         desktopToggle.setPadding(dp(8), dp(8), dp(8), dp(8))
         fun refreshDesktopGestureToggle() {
             desktopToggle.text = launcher.getString(
-                if (NexoDesktopGesture.isEnabled(launcher)) R.string.nexo_desktop_on
-                else R.string.nexo_desktop_off
+                when {
+                    NexoWorkspaceStore.isEnabled(launcher) -> R.string.nexo_desktop_paused_nx10
+                    NexoDesktopGesture.isEnabled(launcher) -> R.string.nexo_desktop_on
+                    else -> R.string.nexo_desktop_off
+                }
             )
+            desktopToggle.isEnabled = !NexoWorkspaceStore.isEnabled(launcher)
         }
         refreshDesktopGestureToggle()
         desktopToggle.setOnClickListener {
