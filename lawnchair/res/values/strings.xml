@@ -604,6 +604,7 @@
     <string name="nexo_desktop_on">Dibujo en escritorio: ACTIVADO (zona central reservada)</string>
     <string name="nexo_desktop_off">Dibujar en escritorio: DESACTIVADO (tocar para activar)</string>
     <!-- NX10A: independent but reversible visual desktops. -->
+    <string name="nexo_desktop_paused_nx10">Dibujar sobre fondo: pausado en modo escritorios propios</string>
     <string name="nexo_workspace_mode_on">Escritorios propios: ACTIVADOS (tocar para restaurar original)</string>
     <string name="nexo_workspace_mode_off">Escritorios propios: DESACTIVADOS (tocar para activar)</string>
     <string name="nexo_workspace_title">Escritorio: %1$s</string>
