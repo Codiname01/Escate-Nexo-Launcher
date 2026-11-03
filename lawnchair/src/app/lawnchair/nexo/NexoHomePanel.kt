@@ -110,6 +110,23 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
         }
         view.addView(desktopToggle)
 
+        val workspaceToggle = text("", 12f, accent, bold = true).apply {
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        }
+        fun refreshWorkspaceToggle() {
+            workspaceToggle.text = launcher.getString(
+                if (NexoWorkspaceStore.isEnabled(launcher)) R.string.nexo_workspace_mode_on
+                else R.string.nexo_workspace_mode_off
+            )
+        }
+        refreshWorkspaceToggle()
+        workspaceToggle.setOnClickListener {
+            launcher.setNexoIndependentWorkspaceEnabled(
+                !NexoWorkspaceStore.isEnabled(launcher),
+            )
+        }
+        view.addView(workspaceToggle)
+
         val scroll = HorizontalScrollView(launcher).apply {
             isHorizontalScrollBarEnabled = false
         }
@@ -145,6 +162,10 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(8); bottomMargin = dp(8) },
         )
+
+        // NX10A has its own visual desktop tiles below. Keep only the compact
+        // switcher on top; previous panel app selections remain untouched.
+        if (NexoWorkspaceStore.isEnabled(launcher)) return
 
         val selectedIds = NexoSpaceAppStore.selectedIds(launcher, selectedSpace.id)
         val apps = NexoSpaceAppStore.installedLaunchableApps(launcher)
