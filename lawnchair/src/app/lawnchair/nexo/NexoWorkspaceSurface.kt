@@ -196,25 +196,6 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
         ))
     }
 
-    /** Returns true only if a real clickable NX10A tile occupies x/y. */
-    fun isTileAt(x: Int, y: Int): Boolean {
-        if (!view.isShown) return false
-        val root = view.getChildAt(0) as? ViewGroup ?: return false
-        val rect = Rect()
-        fun intersects(view: View): Boolean {
-            if (!view.isShown || !view.getGlobalVisibleRect(rect) || !rect.contains(x, y)) return false
-            if (view.isClickable && view is LinearLayout &&
-                view.findViewById<View>(android.R.id.text1) == null &&
-                view.childCount == 2 && view.getChildAt(0) is ImageView) {
-                return true
-            }
-            return if (view is ViewGroup) {
-                (0 until view.childCount).any { intersects(view.getChildAt(it)) }
-            } else false
-        }
-        return intersects(root)
-    }
-
     private fun save(spaceId: String, items: List<NexoWorkspaceStore.Tile>) {
         if (!NexoWorkspaceStore.save(launcher, spaceId, items)) {
             Toast.makeText(launcher, R.string.nexo_workspace_invalid, Toast.LENGTH_LONG).show()
@@ -244,7 +225,7 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
                 val choice = options[selected]
                 if (current.tiles.none { it.kind == "app" && it.component == choice.id }) {
                     save(spaceId, current.tiles + NexoWorkspaceStore.Tile(
-                        kind = "app", label = choice.label, component = choice.id,
+                        kind = "app", label = choice.label.take(100), component = choice.id,
                     ))
                 }
             }
@@ -359,6 +340,14 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
                 val latest = NexoWorkspaceStore.read(launcher, spaceId)
                 if (!latest.valid || index !in latest.tiles.indices ||
                     latest.tiles[index].kind != "folder") return@setPositiveButton
+                if (selected.size > 100) {
+                    Toast.makeText(
+                        launcher,
+                        R.string.nexo_workspace_folder_limit,
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    return@setPositiveButton
+                }
                 val edited = latest.tiles.toMutableList()
                 edited[index] = edited[index].copy(children = all.map { it.id }.filter { it in selected })
                 save(spaceId, edited)
