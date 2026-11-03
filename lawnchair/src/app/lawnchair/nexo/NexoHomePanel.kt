@@ -91,6 +91,26 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
         studio.setOnClickListener { NexoGestureStudio.show(launcher) }
         view.addView(studio)
 
+        // NX09E is explicitly opt-in. The control stays visible on the home panel
+        // so that users can reverse the feature without entering settings.
+        val desktopToggle = text("", 12f, accent, bold = true)
+        desktopToggle.setPadding(dp(8), dp(8), dp(8), dp(8))
+        fun refreshDesktopGestureToggle() {
+            desktopToggle.text = launcher.getString(
+                if (NexoDesktopGesture.isEnabled(launcher)) R.string.nexo_desktop_on
+                else R.string.nexo_desktop_off
+            )
+        }
+        refreshDesktopGestureToggle()
+        desktopToggle.setOnClickListener {
+            NexoDesktopGesture.setEnabled(
+                launcher,
+                !NexoDesktopGesture.isEnabled(launcher),
+            )
+            refreshDesktopGestureToggle()
+        }
+        view.addView(desktopToggle)
+
         val scroll = HorizontalScrollView(launcher).apply {
             isHorizontalScrollBarEnabled = false
         }
