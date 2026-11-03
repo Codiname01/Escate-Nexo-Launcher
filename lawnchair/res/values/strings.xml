@@ -601,7 +601,7 @@
     <string name="nexo_studio_touch_down">Clic o toque capturado: empieza a dibujar</string>
     <string name="nexo_studio_touch_points">Trazando: %1$d puntos capturados</string>
     <string name="nexo_studio_touch_cancelled">Android canceló el trazo. Comienza dentro del cuadro.</string>
-    <string name="nexo_desktop_on">Dibujar en escritorio: ACTIVADO (tocar para desactivar)</string>
+    <string name="nexo_desktop_on">Dibujo en escritorio: ACTIVADO (zona central reservada)</string>
     <string name="nexo_desktop_off">Dibujar en escritorio: DESACTIVADO (tocar para activar)</string>
     <string name="nexo_gesture_choose_icon">Elige una aplicación del panel, escritorio o dock</string>
     <string name="nexo_gesture_no_icons">Añade aplicaciones a este espacio antes de configurar gestos.</string>
