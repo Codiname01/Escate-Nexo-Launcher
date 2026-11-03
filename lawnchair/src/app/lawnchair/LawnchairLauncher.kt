@@ -107,10 +107,18 @@ class LawnchairLauncher : QuickstepLauncher() {
         NexoDesktopGesture(this)
     }
 
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        val delivered = super.dispatchTouchEvent(event)
-        nexoDesktopGesture.observe(event)
-        return delivered
+    // NX09F uses its own opt-in view. Launcher3 receives all other touch streams
+    // normally; a stroke starting in the safe drawing region is reserved by
+    // the view before native page scrolling consumes it.
+    fun setNexoDesktopDrawingEnabled(enabled: Boolean) {
+        NexoDesktopGesture.setEnabled(this, enabled)
+        refreshNexoDesktopDrawingVisibility()
+    }
+
+    private fun refreshNexoDesktopDrawingVisibility() {
+        nexoDesktopGesture.visibility =
+            if (NexoDesktopGesture.isEnabled(this) &&
+                stateManager.state == LauncherState.NORMAL) View.VISIBLE else View.GONE
     }
 
     fun isNexoPanelAtScreenPoint(x: Int, y: Int): Boolean {
@@ -121,9 +129,13 @@ class LawnchairLauncher : QuickstepLauncher() {
     private val nexoPanelStateListener = object : StateManager.StateListener<LauncherState> {
         override fun onStateTransitionStart(toState: LauncherState) {
             nexoHomePanel?.view?.visibility = if (toState == LauncherState.NORMAL) View.VISIBLE else View.GONE
+            nexoDesktopGesture.visibility =
+                if (toState == LauncherState.NORMAL &&
+                    NexoDesktopGesture.isEnabled(this@LawnchairLauncher)) View.VISIBLE else View.GONE
         }
         override fun onStateTransitionComplete(finalState: LauncherState) {
             nexoHomePanel?.view?.visibility = if (finalState == LauncherState.NORMAL) View.VISIBLE else View.GONE
+            refreshNexoDesktopDrawingVisibility()
         }
     }
 
@@ -277,6 +289,18 @@ class LawnchairLauncher : QuickstepLauncher() {
                 panel.view.visibility =
                     if (launcher.stateManager.state == LauncherState.NORMAL) View.VISIBLE else View.GONE
             }
+            // Top-level transparent drawing view; it only accepts ACTION_DOWN
+            // for a blank, bounded area when the NEXO opt-in toggle is ON.
+            if (nexoDesktopGesture.parent == null) {
+                dragLayer.addView(
+                    nexoDesktopGesture,
+                    android.widget.FrameLayout.LayoutParams(
+                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    ),
+                )
+            }
+            refreshNexoDesktopDrawingVisibility()
         }
 
         LauncherOptionsPopup.restoreMissingPopupOptions(launcher)
@@ -517,6 +541,7 @@ class LawnchairLauncher : QuickstepLauncher() {
     override fun onResume() {
         super.onResume()
         refreshNexoHomePanel()
+        refreshNexoDesktopDrawingVisibility()
         restartIfPending()
         refreshPredictionContainersFromModel()
 
@@ -543,6 +568,7 @@ class LawnchairLauncher : QuickstepLauncher() {
     override fun onStateSetEnd(state: LauncherState) {
         super.onStateSetEnd(state)
         nexoHomePanel?.view?.visibility = if (state == LauncherState.NORMAL) View.VISIBLE else View.GONE
+        refreshNexoDesktopDrawingVisibility()
         refreshPredictionContainersFromModel()
     }
 
@@ -550,6 +576,9 @@ class LawnchairLauncher : QuickstepLauncher() {
         launcher.stateManager.removeStateListener(nexoPanelStateListener)
         nexoHomePanel?.detach()
         nexoHomePanel = null
+        if (nexoDesktopGesture.parent != null) {
+            dragLayer.removeView(nexoDesktopGesture)
+        }
         super.onDestroy()
         // Only actually closes if required, safe to call if not enabled
         SmartspacerClient.close()
