@@ -603,6 +603,21 @@
     <string name="nexo_studio_touch_cancelled">Android canceló el trazo. Comienza dentro del cuadro.</string>
     <string name="nexo_desktop_on">Dibujo en escritorio: ACTIVADO (zona central reservada)</string>
     <string name="nexo_desktop_off">Dibujar en escritorio: DESACTIVADO (tocar para activar)</string>
+    <!-- NX10A: independent but reversible visual desktops. -->
+    <string name="nexo_workspace_mode_on">Escritorios propios: ACTIVADOS (tocar para restaurar original)</string>
+    <string name="nexo_workspace_mode_off">Escritorios propios: DESACTIVADOS (tocar para activar)</string>
+    <string name="nexo_workspace_title">Escritorio: %1$s</string>
+    <string name="nexo_workspace_add_app">+ Aplicación</string>
+    <string name="nexo_workspace_add_folder">+ Carpeta</string>
+    <string name="nexo_workspace_empty">Escritorio vacío. Toca aquí para añadir tu primera aplicación.</string>
+    <string name="nexo_workspace_invalid">Este diseño tiene datos no reconocidos. Está protegido contra sobrescritura.</string>
+    <string name="nexo_workspace_no_apps">No hay más aplicaciones disponibles para añadir.</string>
+    <string name="nexo_workspace_move_left">Mover una posición antes</string>
+    <string name="nexo_workspace_move_right">Mover una posición después</string>
+    <string name="nexo_workspace_remove">Quitar de este escritorio</string>
+    <string name="nexo_workspace_edit_folder">Editar aplicaciones de carpeta</string>
+    <string name="nexo_workspace_new_folder">Nueva carpeta</string>
+
     <string name="nexo_gesture_choose_icon">Elige una aplicación del panel, escritorio o dock</string>
     <string name="nexo_gesture_no_icons">Añade aplicaciones a este espacio antes de configurar gestos.</string>
     <string name="nexo_gesture_unassigned">Mantén pulsado el icono para configurar su gesto</string>
