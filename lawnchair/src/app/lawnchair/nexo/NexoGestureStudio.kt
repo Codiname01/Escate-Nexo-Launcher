@@ -345,6 +345,30 @@ internal object NexoGestureStudio {
             .show()
     }
 
+    /**
+     * Run the same M/T classifier and configured action used by Gesture Studio,
+     * but only for gestures explicitly admitted by the opt-in desktop observer.
+     * Does not obey Studio's practice-only switch: desktop has its own opt-in.
+     */
+    internal fun performDesktopStroke(launcher: LawnchairLauncher, points: List<PointF>): Boolean {
+        val detector = GesturePad(
+            launcher,
+            recognized = {},
+            rejected = {},
+            threshold = { shapeTolerance(launcher) },
+        )
+        val gesture = detector.recognizeForDesktop(points)
+        if (gesture != Gesture.DRAW_M && gesture != Gesture.DRAW_T) {
+            Log.d("NEXO_DESKTOP", "stroke_not_recognized points=" + points.size)
+            return false
+        }
+        val action = getAction(launcher, gesture)
+        Log.d("NEXO_DESKTOP", "gesture=" + gesture.id + " action=" + action)
+        if (action == "none") return false
+        perform(launcher, action)
+        return true
+    }
+
     private fun perform(launcher: LawnchairLauncher, action: String) {
         when {
             action == "system:select_space" -> NexoSpaces.showSelector(launcher)
@@ -573,6 +597,8 @@ internal object NexoGestureStudio {
             while (adjusted < -180f) adjusted += 360f
             return adjusted
         }
+
+        fun recognizeForDesktop(input: List<PointF>): Gesture? = recognizeStroke(input)
 
         private fun recognizeStroke(input: List<PointF>): Gesture? {
             if (input.size < 6) {
