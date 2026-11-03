@@ -103,8 +103,7 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
         }
         refreshDesktopGestureToggle()
         desktopToggle.setOnClickListener {
-            NexoDesktopGesture.setEnabled(
-                launcher,
+            launcher.setNexoDesktopDrawingEnabled(
                 !NexoDesktopGesture.isEnabled(launcher),
             )
             refreshDesktopGestureToggle()
