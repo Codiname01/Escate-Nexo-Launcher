@@ -81,7 +81,11 @@ object NexoSpaces {
                 prefs.edit().putString(ACTIVE_SPACE_KEY, space.id).apply()
                 (launcher as? LawnchairLauncher)?.refreshNexoHomePanel()
                 dialog.dismiss()
-                showSpaceApps(launcher, space)
+                // NX10A owns its independent desktop editor; avoid opening the
+                // legacy panel-only app list on every space switch.
+                if (!NexoWorkspaceStore.isEnabled(launcher)) {
+                    showSpaceApps(launcher, space)
+                }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
