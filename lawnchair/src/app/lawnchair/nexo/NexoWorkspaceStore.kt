@@ -49,9 +49,10 @@ internal object NexoWorkspaceStore {
 
     fun read(context: Context, spaceId: String): Snapshot {
         if (!validSpace(spaceId)) return Snapshot(emptyList(), false)
-        val pref = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val raw = pref.getString("layout_$spaceId", null) ?: return Snapshot(emptyList(), true)
         return try {
+            val pref = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val raw = pref.getString("layout_$spaceId", null)
+                ?: return Snapshot(emptyList(), true)
             val root = JSONObject(raw)
             if (root.getInt("version") != 1) return Snapshot(emptyList(), false)
             val items = root.getJSONArray("tiles")
@@ -82,7 +83,9 @@ internal object NexoWorkspaceStore {
      */
     fun save(context: Context, spaceId: String, tiles: List<Tile>): Boolean {
         if (!validSpace(spaceId) || !read(context, spaceId).valid ||
-            tiles.size > MAX_TILES) return false
+            tiles.size > MAX_TILES ||
+            tiles.any { it.label.length > 100 || it.component.length > 400 ||
+                it.children.size > 100 }) return false
         val payload = JSONObject().apply {
             put("version", 1)
             put("tiles", JSONArray().apply {
