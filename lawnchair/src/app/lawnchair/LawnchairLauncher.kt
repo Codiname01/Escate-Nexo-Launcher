@@ -20,11 +20,13 @@ import android.animation.AnimatorSet
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Pair
 import android.view.Display
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewTreeObserver
 import android.window.SplashScreen
@@ -39,6 +41,7 @@ import app.lawnchair.gestures.GestureController
 import app.lawnchair.gestures.VerticalSwipeTouchController
 import app.lawnchair.gestures.config.GestureHandlerConfig
 import app.lawnchair.gestures.ui.LawnchairShortcutActivity
+import app.lawnchair.nexo.NexoDesktopGesture
 import app.lawnchair.nexo.NexoHomePanel
 import app.lawnchair.nexuslauncher.OverlayCallbackImpl
 import app.lawnchair.preferences.PreferenceManager
@@ -98,6 +101,23 @@ import kotlinx.coroutines.launch
 
 class LawnchairLauncher : QuickstepLauncher() {
     private var nexoHomePanel: NexoHomePanel? = null
+
+    // Observe home strokes without intercepting native Launcher3 touch routing.
+    private val nexoDesktopGesture by lazy(LazyThreadSafetyMode.NONE) {
+        NexoDesktopGesture(this)
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        val delivered = super.dispatchTouchEvent(event)
+        nexoDesktopGesture.observe(event)
+        return delivered
+    }
+
+    fun isNexoPanelAtScreenPoint(x: Int, y: Int): Boolean {
+        val panel = nexoHomePanel?.view ?: return false
+        val rect = Rect()
+        return panel.isShown && panel.getGlobalVisibleRect(rect) && rect.contains(x, y)
+    }
     private val nexoPanelStateListener = object : StateManager.StateListener<LauncherState> {
         override fun onStateTransitionStart(toState: LauncherState) {
             nexoHomePanel?.view?.visibility = if (toState == LauncherState.NORMAL) View.VISIBLE else View.GONE
