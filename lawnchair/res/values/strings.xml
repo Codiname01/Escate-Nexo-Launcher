@@ -619,6 +619,8 @@
     <string name="nexo_workspace_edit_folder">Editar aplicaciones de carpeta</string>
     <string name="nexo_workspace_new_folder">Nueva carpeta</string>
     <string name="nexo_workspace_folder_limit">Esta carpeta admite un máximo de 100 accesos.</string>
+    <string name="nexo_workspace_options">Opciones</string>
+    <string name="nexo_workspace_restore_original">Volver al escritorio original</string>
 
     <string name="nexo_gesture_choose_icon">Elige una aplicación del panel, escritorio o dock</string>
     <string name="nexo_gesture_no_icons">Añade aplicaciones a este espacio antes de configurar gestos.</string>
