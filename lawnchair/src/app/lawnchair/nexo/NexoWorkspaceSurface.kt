@@ -1,5 +1,5 @@
 /*
- * ESCATE NEXO — NX10A opt-in independent visual workspaces.
+ * ESCATE NEXO — NX10A1 immersive independent desktop and visual folders.
  * Copyright 2026 ESCATE NEXO contributors. Apache-2.0.
  */
 package app.lawnchair.nexo
@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.view.Gravity
@@ -80,12 +81,11 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
 
     private fun position() {
         val frame = view.layoutParams as? FrameLayout.LayoutParams ?: return
-        val headerRect = Rect()
         val layerRect = Rect()
         if (!launcher.dragLayer.getGlobalVisibleRect(layerRect)) return
         val header = launcher.nexoPanelScreenRect()
         val headerBottom = if (header != null) header.bottom - layerRect.top else dp(270)
-        frame.topMargin = maxOf(dp(145), headerBottom + dp(10))
+        frame.topMargin = maxOf(dp(115), headerBottom + dp(5))
         // Keep bottom dock, search, and system navigation untouched.
         frame.bottomMargin = dp(166)
         view.layoutParams = frame
@@ -101,8 +101,8 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
         val snapshot = NexoWorkspaceStore.read(launcher, space.id)
         val root = LinearLayout(launcher).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(6), dp(12), dp(12))
-            background = rounded(Color.argb(155, 15, 30, 46), 14)
+            setPadding(dp(10), dp(6), dp(10), dp(12))
+            background = rounded(Color.argb(112, 15, 30, 46), 14)
         }
 
         val toolbar = LinearLayout(launcher).apply {
@@ -139,19 +139,23 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
         } else {
             val scroll = ScrollView(launcher).apply {
                 isVerticalScrollBarEnabled = false
+                isFillViewport = true
+                clipToPadding = false
             }
             val grid = GridLayout(launcher).apply {
                 columnCount = 4
                 orientation = GridLayout.HORIZONTAL
+                setPadding(0, dp(14), 0, dp(20))
+                alignmentMode = GridLayout.ALIGN_BOUNDS
             }
             val widthPx = launcher.resources.displayMetrics.widthPixels
-            val itemWidth = maxOf(dp(60), (widthPx - dp(36)) / 4)
+            val itemWidth = maxOf(dp(56), (widthPx - dp(54)) / 4)
 
             snapshot.tiles.forEachIndexed { index, item ->
                 val cell = LinearLayout(launcher).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER_HORIZONTAL
-                    setPadding(dp(4), dp(10), dp(4), dp(8))
+                    setPadding(dp(3), dp(8), dp(3), dp(10))
                     isClickable = true
                     isLongClickable = true
                     setOnClickListener { open(item, space.id, index) }
@@ -160,21 +164,15 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
                         true
                     }
                 }
-                val icon = ImageView(launcher).apply {
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                    setImageDrawable(if (item.kind == "folder") {
-                        launcher.getDrawable(android.R.drawable.ic_menu_agenda)
-                    } else {
-                        val component = ComponentName.unflattenFromString(item.component)
-                        try {
-                            if (component != null) launcher.packageManager.getActivityIcon(component)
-                            else launcher.getDrawable(android.R.drawable.sym_def_app_icon)
-                        } catch (_: PackageManager.NameNotFoundException) {
-                            launcher.getDrawable(android.R.drawable.sym_def_app_icon)
-                        }
-                    })
+                val preview: View = if (item.kind == "folder") {
+                    folderPreview(item, dp(48))
+                } else {
+                    ImageView(launcher).apply {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setImageDrawable(appIcon(item.component))
+                    }
                 }
-                cell.addView(icon, LinearLayout.LayoutParams(dp(44), dp(44)))
+                cell.addView(preview, LinearLayout.LayoutParams(dp(48), dp(48)))
                 cell.addView(title(item.label, 11f).apply {
                     gravity = Gravity.CENTER
                     maxLines = 1
@@ -184,16 +182,70 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
                 ))
                 grid.addView(cell, GridLayout.LayoutParams().apply {
                     width = itemWidth
-                    height = dp(89)
+                    height = dp(103)
                 })
             }
             scroll.addView(grid)
-            root.addView(scroll)
+            root.addView(
+                scroll,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f,
+                ),
+            )
         }
         view.addView(root, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.MATCH_PARENT,
         ))
+    }
+
+    private fun appIcon(componentId: String): Drawable? {
+        val component = ComponentName.unflattenFromString(componentId)
+        return try {
+            if (component != null) launcher.packageManager.getActivityIcon(component)
+            else launcher.getDrawable(android.R.drawable.sym_def_app_icon)
+        } catch (_: PackageManager.NameNotFoundException) {
+            launcher.getDrawable(android.R.drawable.sym_def_app_icon)
+        }
+    }
+
+    /** Preview the first four children without changing the saved folder JSON. */
+    private fun folderPreview(folder: NexoWorkspaceStore.Tile, size: Int): View {
+        val frame = FrameLayout(launcher).apply {
+            background = rounded(Color.rgb(44, 62, 82), 11)
+            setPadding(dp(3), dp(3), dp(3), dp(3))
+        }
+        if (folder.children.isEmpty()) {
+            frame.addView(ImageView(launcher).apply {
+                setImageResource(android.R.drawable.ic_menu_agenda)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }, FrameLayout.LayoutParams(size - dp(12), size - dp(12), Gravity.CENTER))
+            return frame
+        }
+        val grid = GridLayout(launcher).apply {
+            columnCount = 2
+            rowCount = 2
+        }
+        val mini = (size - dp(6)) / 2
+        folder.children.take(4).forEach { id ->
+            grid.addView(
+                ImageView(launcher).apply {
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setImageDrawable(appIcon(id))
+                    setPadding(dp(1), dp(1), dp(1), dp(1))
+                },
+                GridLayout.LayoutParams().apply {
+                    width = mini
+                    height = mini
+                },
+            )
+        }
+        frame.addView(grid, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER,
+        ))
+        return frame
     }
 
     private fun save(spaceId: String, items: List<NexoWorkspaceStore.Tile>) {
