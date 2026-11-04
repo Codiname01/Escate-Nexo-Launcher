@@ -287,28 +287,77 @@ internal class NexoWorkspaceSurface(private val launcher: LawnchairLauncher) {
 
     private fun open(item: NexoWorkspaceStore.Tile, spaceId: String, index: Int) {
         if (item.kind == "folder") {
-            val choices = NexoSpaceAppStore.installedLaunchableApps(launcher)
-            val items = item.children.mapNotNull { id -> choices.firstOrNull { it.id == id } }
-            if (items.isEmpty()) {
-                editFolder(spaceId, index)
-            } else {
-                AlertDialog.Builder(launcher)
-                    .setTitle(item.label)
-                    .setItems(items.map { it.label }.toTypedArray()) { _, which ->
-                        NexoSpaces.launchApp(launcher, items[which])
-                    }
-                    .setNeutralButton(R.string.nexo_workspace_edit_folder) { _, _ ->
-                        editFolder(spaceId, index)
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-            }
+            showFolder(item, spaceId, index)
         } else {
             val installed = NexoSpaceAppStore.installedLaunchableApps(launcher)
             val entry = installed.firstOrNull { it.id == item.component }
             if (entry != null) NexoSpaces.launchApp(launcher, entry)
             else Toast.makeText(launcher, R.string.nexo_app_unavailable, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /** Full visual folder, rather than Android's old single-column item list. */
+    private fun showFolder(folder: NexoWorkspaceStore.Tile, spaceId: String, index: Int) {
+        val installed = NexoSpaceAppStore.installedLaunchableApps(launcher)
+        val apps = folder.children.mapNotNull { id ->
+            installed.firstOrNull { it.id == id }
+        }
+        if (apps.isEmpty()) {
+            editFolder(spaceId, index)
+            return
+        }
+        val container = ScrollView(launcher).apply {
+            setPadding(dp(10), dp(14), dp(10), dp(14))
+            isFillViewport = false
+        }
+        val grid = GridLayout(launcher).apply {
+            columnCount = 3
+            orientation = GridLayout.HORIZONTAL
+        }
+        val cellWidth = maxOf(
+            dp(76),
+            (launcher.resources.displayMetrics.widthPixels - dp(102)) / 3,
+        )
+        var dialog: AlertDialog? = null
+        apps.forEach { app ->
+            val cell = LinearLayout(launcher).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                setPadding(dp(5), dp(12), dp(5), dp(9))
+                isClickable = true
+                setOnClickListener {
+                    dialog?.dismiss()
+                    NexoSpaces.launchApp(launcher, app)
+                }
+            }
+            cell.addView(ImageView(launcher).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setImageDrawable(appIcon(app.id))
+            }, LinearLayout.LayoutParams(dp(52), dp(52)))
+            cell.addView(
+                title(app.label, 12f, Color.rgb(30, 45, 60)).apply {
+                    gravity = Gravity.CENTER
+                    maxLines = 2
+                },
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            grid.addView(cell, GridLayout.LayoutParams().apply {
+                width = cellWidth
+                height = dp(110)
+            })
+        }
+        container.addView(grid)
+        dialog = AlertDialog.Builder(launcher)
+            .setTitle(folder.label)
+            .setView(container)
+            .setPositiveButton(R.string.nexo_workspace_edit_folder) { _, _ ->
+                editFolder(spaceId, index)
+            }
+            .setNegativeButton(R.string.nexo_close, null)
+            .show()
     }
 
     private fun editTile(spaceId: String, index: Int) {
