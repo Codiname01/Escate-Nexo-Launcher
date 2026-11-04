@@ -5,6 +5,7 @@
  */
 package app.lawnchair.nexo
 
+import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
@@ -61,6 +62,11 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
     fun render() {
         view.removeAllViews()
         val selectedSpace = NexoSpaces.currentSpace(launcher)
+        if (NexoWorkspaceStore.isEnabled(launcher)) {
+            renderCompact(selectedSpace)
+            return
+        }
+        view.setPadding(dp(12), dp(12), dp(12), dp(12))
 
         val titleBar = LinearLayout(launcher).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -235,6 +241,97 @@ internal class NexoHomePanel(private val launcher: LawnchairLauncher) {
                 view.addView(more)
             }
         }
+    }
+
+    /**
+     * NX10A1 home bar: space switching and a visible exit stay one tap away.
+     * Advanced gesture controls remain accessible in an options dialog.
+     * Legacy NX10A/09F preferences and workspace data remain unchanged.
+     */
+    private fun renderCompact(space: NexoSpaces.Space) {
+        view.setPadding(dp(10), dp(7), dp(10), dp(7))
+
+        val header = LinearLayout(launcher).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(
+            text(
+                launcher.getString(R.string.nexo_home_header, launcher.getString(space.nameRes)),
+                14f,
+                foreground,
+                bold = true,
+            ),
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        val options = text(launcher.getString(R.string.nexo_workspace_options), 12f, accent, bold = true).apply {
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            isClickable = true
+            setOnClickListener {
+                val labels = arrayOf(
+                    launcher.getString(R.string.nexo_studio_menu),
+                    launcher.getString(R.string.nexo_gesture_button),
+                    launcher.getString(R.string.nexo_workspace_restore_original),
+                )
+                AlertDialog.Builder(launcher)
+                    .setTitle(R.string.nexo_workspace_options)
+                    .setItems(labels) { _, choice ->
+                        when (choice) {
+                            0 -> NexoGestureStudio.show(launcher)
+                            1 -> NexoIconGesture.showActiveSpacePicker(launcher)
+                            2 -> launcher.setNexoIndependentWorkspaceEnabled(false)
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
+        header.addView(options)
+        view.addView(header)
+
+        val modes = LinearLayout(launcher).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        NexoSpaces.Space.entries.forEach { target ->
+            val selected = target.id == space.id
+            val chip = text(
+                launcher.getString(target.nameRes),
+                11f,
+                if (selected) Color.rgb(12, 35, 40) else secondary,
+                bold = selected,
+            ).apply {
+                gravity = Gravity.CENTER
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                background = rounded(
+                    if (selected) accent else Color.rgb(38, 53, 69),
+                    16,
+                )
+                isClickable = true
+                setOnClickListener { NexoSpaces.activateSpace(launcher, target) }
+            }
+            modes.addView(
+                chip,
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    leftMargin = dp(2)
+                    rightMargin = dp(2)
+                },
+            )
+        }
+        view.addView(modes)
+
+        val exit = text(
+            launcher.getString(R.string.nexo_workspace_restore_original),
+            11f,
+            accent,
+            bold = true,
+        ).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            isClickable = true
+            setOnClickListener { launcher.setNexoIndependentWorkspaceEnabled(false) }
+        }
+        view.addView(exit)
     }
 
     private fun text(value: String, sizeSp: Float, color: Int, bold: Boolean = false): TextView =
